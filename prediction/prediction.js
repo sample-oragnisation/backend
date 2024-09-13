@@ -1,57 +1,42 @@
+const express = require('express');
+const axios = require('axios');
 const mongoose = require('mongoose');
-const { exec } = require('child_process');
-const Electric = require('../models/electric'); // Adjust the path as needed
+const Electric = require('../models/electric'); 
+const Solar = require('../models/solar'); 
 
-// Function to fetch last 50 days of data
-const fetchLast50DaysData = async () => {
-  try {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 50);
+// retrieving from mongoDBAtlas and passed to script.py
 
-    const data = await Electric.find({
-      date: {
-        $gte: startDate,
-        $lte: endDate
-      }
-    }).sort({ date: 1 });  // Ensure data is sorted by date
+module.exports.predictEnergy = async (req, res) => {
+    try {
+        const collectionType = req.params.collectionType; 
 
-    return data;
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    throw error;
-  }
-};
+        let data;
+        if (collectionType === 'electric') {
+            data = await Electric.find({}).exec();
+        } else if (collectionType === 'solar') {
+            data = await Solar.find({}).exec();
+        } else {
+            return res.status(400).json({ error: 'Invalid collection type. Must be "electric" or "solar".' });
+        }
 
-// Function to call Python script
-const predictWithPython = (data) => {
-  return new Promise((resolve, reject) => {
-    const pythonScriptPath = process.env.PYTHON_SCRIPT_PATH;
-    const pythonProcess = exec(`python3 ${pythonScriptPath}`, {
-      env: { ...process.env, DATA: JSON.stringify(data) }
-    });
+        const formattedData = data.map(doc => ({
+            date: doc.date,
+            eastCampus: doc.eastCampus,
+            mbaMca: doc.mbaMca,
+            civil: doc.civil,
+            mech: doc.mech,
+            auto: doc.auto,
+            total: doc.total
+        }));
 
-    pythonProcess.stdout.on('data', (data) => {
-      resolve(data.toString());
-    });
+        const response = await axios.post('http://localhost:5000/predict', {
+            data: formattedData,
+            collectionType: collectionType
+        });
 
-    pythonProcess.stderr.on('data', (data) => {
-      reject(data.toString());
-    });
-  });
-};
-
-// API endpoint to get prediction
-const getPrediction = async (req, res) => {
-  try {
-    const data = await fetchLast50DaysData();
-    const prediction = await predictWithPython(data);
-    res.status(200).json({ prediction });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
-  }
-};
-
-module.exports = {
-  getPrediction
+        const forecast = response.data;
+        res.json(forecast);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };

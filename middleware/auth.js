@@ -9,14 +9,14 @@ const auth = (req, res, next) => {
 
         if (!token) return res.status(401).send('Unauthorized');
 
-        jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
+        jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
             if (err) return res.status(403).send('Forbidden');
-            req.userId = user.userId; 
+            req.userId = user.id; 
             next();
         });
     } catch (e) {
         console.log(e);
-        res.status(401).send("Token Expired");
+        res.status(401).send('Token Expired or Invalid');
     }
 };
 
