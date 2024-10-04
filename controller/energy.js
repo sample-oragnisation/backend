@@ -13,7 +13,7 @@ module.exports.login = async (req, res) => {
   try {
     const admin = await Admin.findOne({ email });
     if (!admin) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({  message: 'Invalid email or password' });
     }
 
     if (password !== admin.password) {

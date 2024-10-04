@@ -19,6 +19,6 @@ router.get('/solarPie/:date', getSolarData);
 router.get('/graph/electric/:days', pastNDaysElectric);
 router.get('/graph/solar/:days', pastNDaysSolar);
 router.get('/predictEnergy/:collectionType',predictEnergy);
-router.get('/add/:collectionType',auth,addEnergyData);
+router.post('/add/:collectionType',auth,addEnergyData);
 
 module.exports = router;
